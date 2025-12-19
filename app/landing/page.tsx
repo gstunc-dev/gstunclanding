@@ -1,14 +1,15 @@
 "use client";
 
 import Image from "next/image";
-import Slider from "react-slick";
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState } from "react";
 
 export default function LandingPage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [sliderKey, setSliderKey] = useState(0);
-  const [currentIndex, setCurrentIndex] = useState(0);
+
+  // Testimonial slider state
+  const [startIndex, setStartIndex] = useState(0);
+  const [visibleCount, setVisibleCount] = useState(3);
 
   const testimonials = [
     {
@@ -48,61 +49,53 @@ export default function LandingPage() {
     },
   ];
 
-  const [startIndex, setStartIndex] = useState(0);
+  const getVisibleCount = () => {
+    if (typeof window === "undefined") return 3;
+    const w = window.innerWidth;
+    if (w < 640) return 1; // mobile
+    if (w < 1024) return 2; // tablet
+    return 3; // desktop
+  };
+
+  useEffect(() => {
+    const updateVisible = () => {
+      const count = getVisibleCount();
+      setVisibleCount(count);
+      setStartIndex((prev) =>
+        prev + count > testimonials.length
+          ? Math.max(0, testimonials.length - count)
+          : prev
+      );
+    };
+    updateVisible();
+    window.addEventListener("resize", updateVisible);
+    return () => window.removeEventListener("resize", updateVisible);
+  }, [testimonials.length]);
 
   const nextSlide = () => {
-    if (startIndex + 3 < testimonials.length) {
-      setStartIndex(startIndex + 1);
+    if (startIndex + visibleCount < testimonials.length) {
+      setStartIndex((prev) => prev + 1);
     }
   };
 
   const prevSlide = () => {
     if (startIndex > 0) {
-      setStartIndex(startIndex - 1);
+      setStartIndex((prev) => prev - 1);
     }
   };
-  useEffect(() => {
-    const handleResize = () => {
-      setSliderKey((prev) => prev + 1);
-    };
 
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-  var settings = {
-    dots: true,
-    infinite: false,
-    speed: 500,
-    slidesToShow: 3,
-    slidesToScroll: 1,
-    initialSlide: 0,
-    responsive: [
-      {
-        breakpoint: 768, // ≥ 768px
-        settings: {
-          slidesToShow: 1,
-          slidesToScroll: 1,
-        },
-      },
-    ],
-  };
-
+  // Motion variants
   const container = {
     hidden: {},
     visible: {
-      transition: {
-        staggerChildren: 0.15,
-        delayChildren: 0.2,
-      },
+      transition: { staggerChildren: 0.15, delayChildren: 0.2 },
     },
   };
 
   const stagger = {
     hidden: {},
     visible: {
-      transition: {
-        staggerChildren: 0.15,
-      },
+      transition: { staggerChildren: 0.15 },
     },
   };
 
@@ -151,7 +144,7 @@ export default function LandingPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: "easeOut" }}
       >
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between w-full">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
           {/* Logo */}
           <motion.div
             className="flex-shrink-0"
@@ -162,13 +155,10 @@ export default function LandingPage() {
             <Image src="/logo.png" alt="Logo" width={160} height={160} />
           </motion.div>
 
-          {/* Hamburger Button (mobile) */}
+          {/* Mobile hamburger */}
           <button
             className="md:hidden p-2"
-            onClick={() => {
-              console.log("Menu toggled");
-              setIsMenuOpen(!isMenuOpen);
-            }}
+            onClick={() => setIsMenuOpen((prev) => !prev)}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -186,58 +176,72 @@ export default function LandingPage() {
             </svg>
           </button>
 
-          {/* Navigation */}
-          <AnimatePresence>
-            {(isMenuOpen || typeof window === "undefined") && (
-              <motion.nav
-                className={`${
-                  isMenuOpen ? "inline-flex" : "hidden"
-                } md:flex md:flex-row flex-col md:items-center gap-6 text-sm font-medium text-gray-700 
-              md:static absolute top-[50px] left-45  md:w-auto p-2 pb-6
-              bg-white md:bg-transparent shadow-md md:shadow-none z-50`}
-                initial="hidden"
-                animate="visible"
-                exit={{ opacity: 0, y: -20 }}
+          {/* Desktop nav */}
+          <motion.nav
+            className="hidden md:flex items-center gap-6 text-sm font-medium text-gray-700"
+            initial="hidden"
+            animate="visible"
+            variants={{
+              hidden: { opacity: 0 },
+              visible: {
+                opacity: 1,
+                transition: { staggerChildren: 0.12, delayChildren: 0.3 },
+              },
+            }}
+          >
+            {["Home", "Services", "About Us"].map((item) => (
+              <motion.a
+                key={item}
+                href="#"
+                className="hover:text-gray-900"
                 variants={{
-                  hidden: { opacity: 0, y: -20 },
-                  visible: {
-                    opacity: 1,
-                    y: 0,
-                    transition: { staggerChildren: 0.12, delayChildren: 0.3 },
-                  },
+                  hidden: { opacity: 0, y: -10 },
+                  visible: { opacity: 1, y: 0 },
                 }}
+                transition={{ duration: 0.4 }}
               >
-                {["Home", "Services", "About Us"].map((item) => (
-                  <motion.a
-                    key={item}
-                    href="#"
-                    className="hover:text-gray-900 p-2"
-                    variants={{
-                      hidden: { opacity: 0, y: -10 },
-                      visible: { opacity: 1, y: 0 },
-                    }}
-                    transition={{ duration: 0.4 }}
-                  >
-                    {item}
-                  </motion.a>
-                ))}
-
-                <motion.a
-                  href="#"
-                  className="rounded-xl bg-[#14DA8E] px-4 py-2 text-white text-sm font-semibold hover:bg-emerald-600 transition hover:text-black"
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 0.6, duration: 0.4 }}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  Schedule Free Consultation
-                </motion.a>
-              </motion.nav>
-            )}
-          </AnimatePresence>
+                {item}
+              </motion.a>
+            ))}
+            <motion.a
+              href="#"
+              className="rounded-xl bg-[#14DA8E] px-4 py-2 text-white text-sm font-semibold hover:bg-emerald-600 transition hover:text-black"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.6, duration: 0.4 }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              Schedule Free Consultation
+            </motion.a>
+          </motion.nav>
         </div>
+
+        {/* Mobile nav menu */}
+        <AnimatePresence>
+          {isMenuOpen && (
+            <motion.nav
+              className="md:hidden flex flex-col gap-2 px-4 pb-4 text-sm font-medium text-gray-700 bg-white shadow-md"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+            >
+              {["Home", "Services", "About Us"].map((item) => (
+                <a key={item} href="#" className="py-1">
+                  {item}
+                </a>
+              ))}
+              <a
+                href="#"
+                className="mt-2 rounded-xl bg-[#14DA8E] px-4 py-2 text-white text-sm font-semibold text-center hover:bg-emerald-600 transition hover:text-black"
+              >
+                Schedule Free Consultation
+              </a>
+            </motion.nav>
+          )}
+        </AnimatePresence>
       </motion.header>
+
       {/* HERO */}
       <motion.section
         className="px-4 sm:px-6 lg:px-8 mb-8"
@@ -357,7 +361,7 @@ export default function LandingPage() {
                   Cloud Solutions
                 </h3>
                 <p className="mt-2 sm:mt-3 text-xs sm:text-sm text-gray-700">
-                  Secure, reliable cloud services built for scale
+                  Secure, reliable cloud services built for scale.
                 </p>
               </div>
               <div className="mt-4 sm:mt-6 flex justify-end">
@@ -375,7 +379,7 @@ export default function LandingPage() {
                   DevOps & Automation
                 </h3>
                 <p className="mt-2 sm:mt-3 text-xs sm:text-sm text-gray-700">
-                  Efficient, dependable automation services
+                  Efficient, dependable automation services.
                 </p>
               </div>
               <div className="mt-4 sm:mt-6 flex justify-end">
@@ -393,7 +397,7 @@ export default function LandingPage() {
                   Digital Marketing
                 </h3>
                 <p className="mt-2 sm:mt-3 text-xs sm:text-sm text-gray-700">
-                  Result-driven marketing services
+                  Result-driven marketing services.
                 </p>
               </div>
               <div className="mt-4 sm:mt-6 flex justify-end">
@@ -422,7 +426,7 @@ export default function LandingPage() {
                     Branding
                   </h3>
                   <p className="mt-2 sm:mt-3 text-xs sm:text-sm text-gray-700">
-                    Strategic branding services building trust and recognition
+                    Strategic branding services building trust and recognition.
                   </p>
                 </div>
                 <div className="mt-4 sm:mt-6 flex justify-end">
@@ -446,7 +450,7 @@ export default function LandingPage() {
                   </h3>
                   <p className="mt-2 sm:mt-3 text-xs sm:text-sm text-gray-700">
                     High-quality design services for engaging digital
-                    experiences
+                    experiences.
                   </p>
                 </div>
                 <div className="mt-4 sm:mt-6 flex justify-end">
@@ -485,7 +489,6 @@ export default function LandingPage() {
                 <div className="absolute inset-0 rounded-2xl bg-green-100 -z-10" />
                 <Image src="/about.png" alt="About" width={260} height={260} />
               </div>
-
               <h3 className="mt-4 sm:mt-6 text-base sm:text-lg font-semibold">
                 Divjot Singh Sikand
               </h3>
@@ -533,9 +536,7 @@ export default function LandingPage() {
           Voices of Our
           <br className="hidden sm:block" /> Clients
         </motion.h2>
-      
-    
-    
+
         <div className="relative flex items-center justify-center">
           <button
             onClick={prevSlide}
@@ -543,13 +544,19 @@ export default function LandingPage() {
           >
             {"<"}
           </button>
-          <div className="flex overflow-x-hidden w-full max-w-4xl">
+
+          <div className="flex overflow-hidden w-full max-w-4xl">
             <motion.div
               className="flex transition-transform duration-500 ease-in-out"
-              style={{ transform: `translateX(-${startIndex * (100 / 3)}%)` }}
+              style={{
+                transform: `translateX(-${startIndex * (100 / visibleCount)}%)`,
+              }}
             >
               {testimonials.map((item, index) => (
-                <div key={index} className={`flex-shrink-0 w-1/3 px-2`}>
+                <div
+                  key={index}
+                  className="flex-shrink-0 px-2 w-full sm:w-1/2 lg:w-1/3"
+                >
                   <div
                     className={`p-6 rounded-xl shadow-lg ${
                       item.isDark
@@ -573,6 +580,7 @@ export default function LandingPage() {
               ))}
             </motion.div>
           </div>
+
           <button
             onClick={nextSlide}
             className="absolute right-0 z-10 px-4 py-2 bg-gray-200 rounded-full"
